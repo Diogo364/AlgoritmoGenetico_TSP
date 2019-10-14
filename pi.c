@@ -2,7 +2,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define QtNos 5
+#define QtNode 4
+#define path "graph.txt"
 
 typedef struct node{
     int id;
@@ -17,26 +18,31 @@ typedef struct edge{
 }edge;
 
 typedef struct cromossomo{
-    char caminho[QtNos];
+    char caminho[QtNode];
     int peso;
 }cromossomo;
 
+node * inicializarArrayNode(void);
 
-/*Inicializa array de nodes com configuracao padrao:
-**id = contador
-**qntConexoes = 0
-**neighbor = NULL
-*/
-node * inicializarNode(void);
+int semConexao(node Node);
 
-edge* createconection(node* no, int id, int weight){
-    edge *novo, *aux;
-    novo = (edge*)malloc(sizeof(edge));
-    novo->conexao = &no[id];
-    novo->outro = NULL;
-    novo->peso = weight;
-    return novo;
+void createEdge(node **Node,int origin ,int destination, int weight);
+
+int readFile(FILE *connections, int **vetor){
+    if(connections == NULL){
+        printf("ERRO NA LEITURA DO ARQUIVO!!\n");
+    }else{
+        if ((fscanf(connections,"%d,%d,%d\n", &(*vetor)[0], &(*vetor)[1], &(*vetor)[2]) != EOF)) {
+            return 1;
+        }else{
+            return 0;
+        }
+    }
+    return 0;
 }
+
+
+
 
 void inicializarcaminho(cromossomo *c1, node grafo){
     char *aux, strcopy[10000], delimitador[] = ",";
@@ -53,71 +59,33 @@ void inicializarcaminho(cromossomo *c1, node grafo){
     }
 }
 
-node* initializegraph(){
-    node *aux;
-    int i;
-    aux = (node*)malloc(sizeof(node) * QtNos);
-    for(i = 0; i < N; i++){
-        printf("\nEntre com o ID do no: ");
-        scanf("%d", &aux[i].id);
-    }
-    return aux;
-}
-
-
-
 int main(void){
+    FILE *connections;
     node *teste;
-    edge *point;
-    cromossomo caminho1;
-    int i, qnt, auxconect, peso;
+    int *vetor, i = 1;
 
+    connections = fopen(path, "r");
+    vetor = (int*)malloc(sizeof(int) * 3);
 
-
-
-    teste = (node*)malloc(sizeof(node) * Qnos);
-    inicializarcaminho(&caminho1,teste[0]);
-    for(i = 0; i < N; i++){
-        teste[i].id = i;
-        teste[i].neighbor = NULL;
-        printf("\nEntre com a quantidade de conexoes do no %d: ", i);
-        scanf("%d", &qnt);
-        teste[i].qntConexoes = qnt;
-        while (qnt > 0) {
-            printf("\nEntre com um no de conexao para o no %d e o peso dessa conexao: ", i);
-            scanf("%d %d", &auxconect, &peso);
-            if(teste[i].neighbor == NULL){
-                teste[i].neighbor = createconection(teste, auxconect, peso);
-            }else{
-                point = teste[i].neighbor;
-                while(point->outro != NULL){
-                    point = point->outro;
-                }
-                point->outro = createconection(teste, auxconect, peso);
-            }
-            qnt--;
-        }
+    teste = inicializarArrayNode();
+    while(i != 0){
+        i = readFile(connections, &vetor);
+        printf("%d, %d, %d\n", vetor[0], vetor[1], vetor[2]);
     }
 
-
-
-    for(i = 0;i < N; i++){
-        printf("\nO no %d tem %d conexoes:",teste[i].id, teste[i].qntConexoes);
-        point = teste[i].neighbor;
-        do{
-            printf("\nConexao com %d", (point->conexao)->id);
-            point = point->outro;
-        }while (point != NULL);
-        printf("\n");
-    }
-
-
+    createEdge(&teste, 1, 0, 4);
 
 
     return 0;
 }
 
-node * inicializarNode(void){
+/*
+**Inicializa array de nodes com configuracao padrao:
+**id = contador
+**qntConexoes = 0
+**neighbor = NULL
+*/
+node * inicializarArrayNode(void){
     node *arrayNode;
     int init;
     arrayNode = (node*)malloc(sizeof(node) * QtNode);
@@ -127,4 +95,38 @@ node * inicializarNode(void){
         arrayNode[init].qntConexoes = 0;
     }
     return arrayNode;
+}
+
+/*
+**Retorna 1 se o node nao possuir conexoes
+**Retorna 0 se o node possuir conexoes
+*/
+int semConexao(node Node){
+    if (Node.neighbor == NULL) {
+        return 1;
+    }else{
+        return 0;
+    }
+}
+
+/*
+**Utiliza endereco de array de node para acrescentar conexoes com devido peso
+**acrescenta o endereco do destino na proxima posicao disponivel da lista ligada da origem
+*/
+void createEdge(node **Node,int origin ,int destination, int weight){
+    edge *novo, *aux;
+    novo = (edge*)malloc(sizeof(edge));
+    novo->conexao = &(*Node)[destination];
+    novo->outro = NULL;
+    novo->peso = weight;
+    if (semConexao((*Node)[origin])) {
+        (*Node)[origin].neighbor = novo;
+    }else{
+        aux = (*Node)[origin].neighbor;
+        while (aux->outro != NULL) {
+            aux =  aux->outro;
+        }
+        aux->outro = novo;
+    }
+    (*Node)[origin].qntConexoes = (*Node)[origin].qntConexoes + 1;
 }

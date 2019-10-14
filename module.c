@@ -37,10 +37,10 @@ int semConexao(node Node){
     }
 }
 
-edge * createconection(node *no, int id, int weight){
-    edge *novo, *aux;
+edge * createconection(node *graph, int id, int weight){
+    edge *novo;
     novo = (edge*)malloc(sizeof(edge));
-    novo->conexao = &no[id];
+    novo->conexao = &graph[id];
     novo->outro = NULL;
     novo->peso = weight;
     return novo;
