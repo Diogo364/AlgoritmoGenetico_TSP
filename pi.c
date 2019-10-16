@@ -2,25 +2,29 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define QtNode 4
-#define path "graph.txt"
+#define QtNode 4    //Quantidades de nodes do grafo
+#define path "graph.txt" //Caminho do arquivo txt que contem a estrutura do grafo
 
+//Estrutura de cada node
 typedef struct node{
     int id;
-    int qntConexoes;
-    struct edge *neighbor;
+    int qntConexoes; //Quantas conexoes se originam nesse node
+    struct edge *neighbor; //Endereco da primeira conexao
 }node;
 
+//Estrutura que representa a conexao
 typedef struct edge{
-    int peso;
-    struct node *conexao;
-    struct edge *outro;
+    int peso; //Peso da conexao
+    struct node *conexao; //Endereco do node de destino da conexao
+    struct edge *outro; //Endereco de outra conexao para o mesmo node de origem
 }edge;
 
+/*EM IMPLEMENTACAO
 typedef struct cromossomo{
     char caminho[QtNode];
     int peso;
 }cromossomo;
+*/
 
 node * inicializarArrayNode(void);
 
@@ -28,22 +32,11 @@ int semConexao(node Node);
 
 void createEdge(node **Node,int origin ,int destination, int weight);
 
-int readFile(FILE *connections, int **vetor){
-    if(connections == NULL){
-        printf("ERRO NA LEITURA DO ARQUIVO!!\n");
-    }else{
-        if ((fscanf(connections,"%d,%d,%d\n", &(*vetor)[0], &(*vetor)[1], &(*vetor)[2]) != EOF)) {
-            return 1;
-        }else{
-            return 0;
-        }
-    }
-    return 0;
-}
+int readFile(FILE *connections, int **vetor);
 
 
-
-
+/*
+**EM IMPLEMENTACAO
 void inicializarcaminho(cromossomo *c1, node grafo){
     char *aux, strcopy[10000], delimitador[] = ",";
     int i = 0, array[10000];
@@ -58,22 +51,26 @@ void inicializarcaminho(cromossomo *c1, node grafo){
         i++;
     }
 }
-
+*/
 int main(void){
-    FILE *connections;
-    node *teste;
-    int *vetor, i = 1;
+    FILE *connections; //Estrutura das conexoes do grafo sera carregada por essa variavel
+    node *graph;       //Array de nodes (grafo)
+    int *OrDestPeso,   //Vetor contendo Node de origem, Node de destino e Peso de conexao lido
+    fimArquivo;        //Representara o final do arquivo carregado em connections
 
-    connections = fopen(path, "r");
-    vetor = (int*)malloc(sizeof(int) * 3);
+    connections = fopen(path, "r"); //Inicializa variavel com o arquivo contendo a estrutura do grafo
+    OrDestPeso = (int*)malloc(sizeof(int) * 3); //Inicializa vetor para armazenar a estrutura de connections
+    graph = inicializarArrayNode(); //Inicializa os nodes do grafo
 
-    teste = inicializarArrayNode();
-    while(i != 0){
-        i = readFile(connections, &vetor);
-        printf("%d, %d, %d\n", vetor[0], vetor[1], vetor[2]);
-    }
+    //Configura todas as conexoes do grafo
+    do {
+        fimArquivo = readFile(connections, &OrDestPeso);
+        // printf("%d, %d, %d\n", OrDestPeso[0], OrDestPeso[1], OrDestPeso[2]);
+        createEdge(&graph, OrDestPeso[0], OrDestPeso[1], OrDestPeso[2]);
+    } while(fimArquivo != 0);
 
-    createEdge(&teste, 1, 0, 4);
+
+
 
 
     return 0;
@@ -129,4 +126,22 @@ void createEdge(node **Node,int origin ,int destination, int weight){
         aux->outro = novo;
     }
     (*Node)[origin].qntConexoes = (*Node)[origin].qntConexoes + 1;
+}
+
+/*
+**Le um arquivo txt com padrao de linhas: "int,int,int\n"
+**Aloca os int nas posicoes 0, 1, 2 de um vetor, respectivamente
+**Retorna 0 se chegar ao final do arquivo ou não conseguir realizar a operacao
+*/
+int readFile(FILE *connections, int **vetor){
+    if(connections == NULL){
+        printf("ERRO NA LEITURA DO ARQUIVO!!\n");
+    }else{
+        if ((fscanf(connections,"%d,%d,%d\n", &(*vetor)[0], &(*vetor)[1], &(*vetor)[2]) != EOF)) {
+            return 1;
+        }else{
+            return 0;
+        }
+    }
+    return 0;
 }
