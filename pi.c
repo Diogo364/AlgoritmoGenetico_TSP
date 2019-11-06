@@ -466,6 +466,6 @@ void showCromossomos(cromossomo *populacao){
             pointer = pointer->next;    //Aponta para o proximo node do caminho
         }
         printf("PESO: %d\nFITNESS %d\n", populacao[atual].peso, populacao[atual].fitness);
-        printf("----------------------\n");
+//        printf("----------------------\n");
     }
 }
