@@ -3,9 +3,16 @@
 #include <time.h>
 #include <string.h>
 
-#define QtNode 10               //Quantidade de nodes do grafo
-#define INF 1000               //Valor absurdo para conexao inexistente
-#define TamanhoPopulacao 30    //Quantidade de cromossomos em cada geracao
+#define QtNode 10
+#define INF 1000                //Valor absurdo para conexao inexistente
+#define TamanhoPopulacao 10     //Quantidade de cromossomos em cada geracao
+#define ORIGEM 1                //Node de origem dos cromossomos
+#define DESTINO 2               //Node de destino dos cromossomos
+#define TaxaMutacao 50
+#define TaxaElitismo 10   //Referente a permanencia de percentual de individuos para a proxima geracao
+#define QtGeracoes 10
+
+
 /*
     **ANTES DE COMPILAR: Ajeitar caminho absoluto do arquivo -> graph.txt
 */
@@ -57,26 +64,37 @@ node * inicializarArrayNode(void);
 int semConexao(node Node);
 void createEdge(node **Node,int origin ,int destination, int weight);
 int readFile(FILE *arquivoConexaoNode, int **origemDestinoPeso);
-cromossomo * createArrayCromossomo(int origem, int destino, node *graph);
+cromossomo * createArrayCromossomo(int origem, int destino, node *graph, int *geracao);
 gene * createGeneNode(int Node);
 gene* initializeGene();
 gene * initializeCaminhoCromossomo(int origem, int destino, node *Graph);
-int pesoCromossomo(cromossomo Cromossomo, node *graph);
+int pesoCromossomo(gene *caminho, node *graph);
 binaryTree * initializeTree(int origem);
 int isInTree(int value, binaryTree *tree);
-void showCromossomos(cromossomo *Cromossomo);
-int pesarPopulacao(cromossomo *Cromossomo);
+void showPopulacao(cromossomo *Cromossomo);
+void showIndividuo(cromossomo *populacao, int individuo);
+int pesarPopulacao(cromossomo *populacao);
 void generateFitness(cromossomo *populacao, int *somatorioFitness);
 int * generateArrayProbabilidade(cromossomo *populacao, int somatorioFitness);
-int * pickTop10(cromossomo *populacao, int dezPorCento);
-
+int * pickTop10(cromossomo *populacao, int *percentualElitismo);
+int avaliaCruzamento(cromossomo parent1, cromossomo parent2);
+cromossomo copyCromossomo(cromossomo individuo);
+void crossingOver(cromossomo *individuo1, cromossomo *individuo2, int pontoCrossingOver);
+void corrigeLoop(gene *caminho);
+int tamanhoCaminho(gene *caminho);
+void mutar(gene *caminho, node *graph);
+cromossomo cruzamento(cromossomo *populacao, int *arrayProbabilidade, node *graph);
 
 int main(void){
     FILE *connections; //Estrutura das conexoes do grafo sera carregada por essa variavel
     node *graph;       //Array de nodes (grafo)
     int *OrigemDestinoPeso;   //Vetor Auxiliar Para Transportar o Node de origem, Node de destino e Peso de uma Conexao
     int temArquivo = 0;    //Representa o final do arquivo
-    int dezPorCento = TamanhoPopulacao / 10;
+    int percentualElitismo = TamanhoPopulacao / TaxaElitismo;
+    int geracao = 0;     //Identifica geracao atual
+    int somaFitness = 0;    //Armazena o valor total do fitness da populacao para selecao dos melhores
+    int *melhores;          //Armazena os melhores 10% da populacao
+    int *arrayProbabilidade;    //Armazena a probabilidade dos individuos serem selecionados para cruzamento
     cromossomo *populacao;
     srand(time(NULL));  //Define semente variavel para funcao rand()
     rand();             //Resolucao de problema de variabilidade na primeira chamada da funcao rand()
@@ -98,22 +116,37 @@ int main(void){
     }while(temArquivo);
     //**Grafo inicializado na variavel graph
 
-    //BLOCO DE INICIALIZACAO DOS CROMOSSOMOS
-    populacao = createArrayCromossomo(7, 1, graph);
-    int somaFitness = -1, *arrayProbabilidade, *top;
+    //CODIGO GENETICO
+//    while(geracao < QtGeracoes){
+//        populacao = createArrayCromossomo(ORIGEM, DESTINO, graph, &geracao);
+//        generateFitness(populacao, &somaFitness);
+//        arrayProbabilidade = generateArrayProbabilidade(populacao, somaFitness);
+//        melhores = pickTop10(populacao, percentualElitismo);
+//
+//    }
+    cromossomo *newPopulacao;
+    int individuo = 0;
+
+    populacao = createArrayCromossomo(ORIGEM, DESTINO, graph, &geracao);
     generateFitness(populacao, &somaFitness);
     arrayProbabilidade = generateArrayProbabilidade(populacao, somaFitness);
-    top = pickTop10(populacao, dezPorCento);
-
-    showCromossomos(populacao);
-
-    for(int i = 0; i < dezPorCento; i++){
-        printf("%d\n", top[i]);
+    melhores = pickTop10(populacao, &percentualElitismo);
+    showPopulacao(populacao);
+    newPopulacao = createArrayCromossomo(ORIGEM, DESTINO, graph, &geracao);
+    while(individuo < TamanhoPopulacao){
+        newPopulacao[individuo] = cruzamento(populacao, arrayProbabilidade, graph);
+        individuo++;
     }
+    individuo = 0;
+    while(individuo < percentualElitismo){
+        newPopulacao[individuo] = copyCromossomo(populacao[melhores[individuo]]);
+        individuo++;
+    }
+    showPopulacao(newPopulacao);
 
-//    printf("\n\n%d", populacao[0].fitness);
-
-
+    //    cromossomo *c1 = cruzamento(populacao, arrayProbabilidade, graph);
+//    showIndividuo(c1, 0);
+//    printf("\n%d",c1->peso);
 
     return 0;
 }
@@ -211,14 +244,14 @@ gene * createGeneNode(int Node){
 
 /*
 **Retorna o peso do cromossomo
- * Recebe como Parametro o cromossomo a ser pesado e o ponteiro contendo o grafo
+ * Recebe como Parametro o caminho do cromossomo a ser pesado e o ponteiro contendo o grafo
 */
-int pesoCromossomo(cromossomo populacao, node *graph){
+int pesoCromossomo(gene *caminho, node *graph){
     gene *origem = NULL, *destino = NULL;   //Variaveis que receberao a origem e o destino de cada conexao
     int PesoCromossomo = 0;
     edge *conexao;  //Variavel que recebera as conexoes a serem testadas
-    origem = populacao.caminho;            //Definicao do node de origem da conexao
-    destino = populacao.caminho->next;     //Definicao do node destino da conexao
+    origem = caminho;            //Definicao do node de origem da conexao
+    destino = caminho->next;     //Definicao do node destino da conexao
     while(destino != NULL){   //Enquanto houver conexao valida
         conexao = graph[origem->id].neighbor; //Conexao aponta para o primeiro vizinho do node de origem
         while(conexao != NULL && (conexao->conexao->id != destino->id)){  //Enquanto ainda houverem vizinhos e o vizinho nao for o node de destino
@@ -232,26 +265,6 @@ int pesoCromossomo(cromossomo populacao, node *graph){
         destino = destino->next; //Destino aponta para o proximo node
     }
     return PesoCromossomo;
-}
-
-/*
- * Cria e inicializa a populacao de cromossomos
- */
-cromossomo * createArrayCromossomo(int origem, int destino, node *graph){
-    cromossomo *populacao;
-    int init;   //Variavel iteravel iniciadora
-    populacao = (cromossomo*)malloc(sizeof(cromossomo) * TamanhoPopulacao);  //Aloca a populacao
-    for (init = 0; init < TamanhoPopulacao; init++) {  //Para os cromossomos da populacao
-        //Atribui o caminho do cromossomo
-        populacao[init].caminho = NULL;
-        while (populacao[init].caminho == NULL){
-            populacao[init].caminho = initializeCaminhoCromossomo(origem, destino, graph);
-        }
-        //Atribui o peso do cromossomo
-        populacao[init].peso = pesoCromossomo(populacao[init], graph);
-        populacao[init].fitness = 0;
-    }
-    return populacao;
 }
 
 /*
@@ -305,6 +318,31 @@ gene * initializeCaminhoCromossomo(int origem, int destino, node *Graph){
     }
     return caminho;
 }
+
+/*
+ * Cria e inicializa a populacao de cromossomos
+ * modoGeracao = 1: Nao realiza a criacao de caminhos
+ * modoGeracao = 0: Realiza a criacao de caminhos
+ */
+cromossomo * createArrayCromossomo(int origem, int destino, node *graph, int *geracao){
+    cromossomo *populacao;
+    int init;   //Variavel iteravel iniciadora
+    populacao = (cromossomo*)malloc(sizeof(cromossomo) * TamanhoPopulacao);  //Aloca a populacao
+    for (init = 0; init < TamanhoPopulacao; init++) {  //Para os cromossomos da populacao
+        populacao[init].caminho = NULL;
+        populacao[init].fitness = 0;
+        if(*geracao == 0){   //Se for a primeira geracao
+            //Atribui um caminho valido e um peso ao cromossomo
+            while (populacao[init].caminho == NULL){
+                populacao[init].caminho = initializeCaminhoCromossomo(origem, destino, graph);
+            }
+            populacao[init].peso = pesoCromossomo(populacao[init].caminho, graph);
+        }
+    }
+    *geracao = *geracao + 1;
+    return populacao;
+}
+
 
 /*
  * Inicializa uma arvore binaria com configuracao padrao:
@@ -416,20 +454,20 @@ int * generateArrayProbabilidade(cromossomo *populacao, int somatorioFitness){
  * Seleciona os 10% mais bem adaptados da populacao (maior fitness)
  * Retorna um array com os individuos
  */
-int * pickTop10(cromossomo *populacao, int dezPorCento){
+int * pickTop10(cromossomo *populacao, int *percentualElitismo){
     int contador = 0, individuo = 0;
     int fitnessCandidato = 0;
     int fitnessConsolidado = 0;
     int candidato = 0, aux = 0;
     //Garante que pelo menos um individuo esteja no array
-    if(dezPorCento == 0){
-        dezPorCento = 1;
+    if(*percentualElitismo == 0){
+        (*percentualElitismo) = 1;
     }
     //Aloca vetor de tamanho correspondente a 10% da populacao
-    int *top10 = (int*)malloc(sizeof(int) * dezPorCento);
+    int *top10 = (int*)malloc(sizeof(int) * (*percentualElitismo));
     while(individuo < TamanhoPopulacao){    //Enquanto houverem individuos na populacao
         //Adiciona os primeiros 10% individuos da populacao no array
-        if(individuo < dezPorCento){
+        if(individuo < (*percentualElitismo)){
             top10[individuo] = individuo;
         }
             //Teste para restante da populacao
@@ -437,7 +475,7 @@ int * pickTop10(cromossomo *populacao, int dezPorCento){
             candidato = individuo;
             //Itera o array dos 10% comparando candidatos com os consolidados
             //Se o candidato for mais adaptado que o consolidado, este e acrescentado aos consolidados e o ex-consolidado se torna o novo candidato
-            while(contador < dezPorCento){
+            while(contador < (*percentualElitismo)){
                 fitnessCandidato = populacao[candidato].fitness;
                 fitnessConsolidado = populacao[top10[contador]].fitness;
                 if(fitnessCandidato > fitnessConsolidado){
@@ -454,8 +492,145 @@ int * pickTop10(cromossomo *populacao, int dezPorCento){
     return top10;
 }
 
+int * chooseParents(int *arrayProbabilidade){
+    int p1, p2, *parents = (int*)malloc(sizeof(int) * 2);
+    do{
+        p1 = arrayProbabilidade[rand() % 100];
+        p2 = arrayProbabilidade[rand() % 100];
+        parents[0] = p1;
+        parents[1] = p2;
+    }while(parents[0] == parents[1]);
+    return parents;
+}
+
+int avaliaCruzamento(cromossomo parent1, cromossomo parent2){
+    gene* caminho1 = parent1.caminho->next;
+    gene* caminho2 = parent2.caminho->next;
+    binaryTree *tree1 = initializeTree(caminho1->id);
+    int id[QtNode], contador = 0;
+    while(caminho1->id != DESTINO){
+        isInTree(caminho1->id, tree1);
+        caminho1 = caminho1->next;
+    }
+    while(caminho2->id != DESTINO){
+        if(isInTree(caminho2->id, tree1)){
+            id[contador] = caminho2->id;
+            contador++;
+        }
+        caminho2 = caminho2->next;
+    }
+    if(!contador){
+        return -1;
+    }
+    return id[rand() % contador];
+}
+
+cromossomo copyCromossomo(cromossomo individuo){
+    cromossomo *copia = (cromossomo*)malloc(sizeof(cromossomo));
+    gene *caminho = individuo.caminho;
+    gene *novoCaminho = createGeneNode(caminho->id);
+    copia->peso = individuo.peso;
+    copia->fitness = 0;
+    copia->caminho = novoCaminho;
+    while(1){
+        caminho = caminho->next;
+        if(caminho == NULL){
+            break;
+        }else{
+            novoCaminho->next = createGeneNode(caminho->id);
+            novoCaminho = novoCaminho->next;
+        }
+    }
+    return *copia;
+
+}
+
+void crossingOver(cromossomo *individuo1, cromossomo *individuo2, int pontoCrossingOver){
+    gene *caminhoIndividuo1, *caminhoIndividuo2, *aux;
+    caminhoIndividuo1 = individuo1->caminho;
+    caminhoIndividuo2 = individuo2->caminho;
+    while ((caminhoIndividuo1->id != pontoCrossingOver) || (caminhoIndividuo2->id != pontoCrossingOver)){
+        if(caminhoIndividuo1->id != pontoCrossingOver){
+            caminhoIndividuo1 = caminhoIndividuo1->next;
+        }
+        if(caminhoIndividuo2->id != pontoCrossingOver){
+            caminhoIndividuo2 = caminhoIndividuo2->next;
+        }
+    }
+    aux = caminhoIndividuo1->next;
+    caminhoIndividuo1->next = caminhoIndividuo2->next;
+    caminhoIndividuo2->next = aux;
+}
+
+void corrigeLoop(gene *caminho){
+    binaryTree *tree;
+    gene *loop;
+    initializeTree(caminho->id);
+    while(1){
+        loop = caminho->next;
+        if(loop == NULL){
+            return;
+        }else{
+            if(isInTree(loop->id, tree)){
+                break;
+            }
+        }
+    }
+    while(caminho->id != loop->id){
+        caminho = caminho->next;
+    }
+    caminho->next = loop->next;
+}
+
+int tamanhoCaminho(gene *caminho){
+    int tamanho = 0;
+    while(caminho != NULL){
+        caminho = caminho->next;
+        tamanho++;
+    }
+    return tamanho;
+}
+void mutar(gene *caminho, node *graph){
+    gene *ponteiro = NULL;
+    int tamanho = tamanhoCaminho(caminho);
+    int pontoAleatorio;
+    do{
+        ponteiro = caminho;
+        pontoAleatorio = rand() % tamanho;
+            while (pontoAleatorio){
+                ponteiro = ponteiro->next;
+                pontoAleatorio--;
+            }
+    }while(ponteiro->id == DESTINO);
+    caminho->next = initializeCaminhoCromossomo(caminho->next->id, DESTINO, graph);
+}
+
+cromossomo cruzamento(cromossomo *populacao, int *arrayProbabilidade, node *graph){
+    cromossomo *offspring1 = (cromossomo*)malloc(sizeof(cromossomo));
+    cromossomo *offspring2 = (cromossomo*)malloc(sizeof(cromossomo));
+    int *parents = NULL, pontoCrossingOver;
+    do{
+        parents = chooseParents(arrayProbabilidade);
+        pontoCrossingOver = avaliaCruzamento(populacao[parents[0]], populacao[parents[1]]);
+    }while(pontoCrossingOver == -1);
+//    printf("PARENTS:");
+//    for (int i = 0; i < 2; ++i) {
+//        showIndividuo(populacao, parents[i]);
+//    }
+    offspring1[0] = copyCromossomo(populacao[parents[0]]);
+    offspring2[0] = copyCromossomo(populacao[parents[1]]);
+    crossingOver(offspring1, offspring2, pontoCrossingOver);
+    corrigeLoop(offspring1->caminho);
+    corrigeLoop(offspring2->caminho);
+    if (rand() % 101 <= TaxaMutacao) mutar(offspring1->caminho, graph);
+    if (rand() % 101 <= TaxaMutacao) mutar(offspring2->caminho, graph);
+    offspring1->peso = pesoCromossomo(offspring1->caminho, graph);
+    offspring2->peso = pesoCromossomo(offspring2->caminho, graph);
+    return (offspring1->peso > offspring2->peso)? *offspring2: *offspring1;
+}
+
 //Apresentacao de cromossomos
-void showCromossomos(cromossomo *populacao){
+void showPopulacao(cromossomo *populacao){
     int atual;      //Variavel para indice do cromossomo
     gene *pointer;  //Aponta para os nodes do caminho do cromossomo
     for (atual = 0; atual < TamanhoPopulacao; ++atual) { //Para todos os cromossomos da populacao
@@ -466,6 +641,19 @@ void showCromossomos(cromossomo *populacao){
             pointer = pointer->next;    //Aponta para o proximo node do caminho
         }
         printf("PESO: %d\nFITNESS %d\n", populacao[atual].peso, populacao[atual].fitness);
-//        printf("----------------------\n");
+        printf("----------------------\n");
     }
+}
+//Apresentacao de cromossomos
+void showIndividuo(cromossomo *populacao, int individuo){
+        gene *caminho;
+        caminho = populacao[individuo].caminho;
+        printf("\nIndividuo %d\n", individuo); //Impressao do peso
+        while(caminho != NULL){     //Enquanto nao acabar o caminho
+            printf("Node: %d\n", caminho->id);     //Imprime o node correspondente
+            caminho = caminho->next;    //Aponta para o proximo node do caminho
+        }
+        printf("FITNESS %d\n", populacao[individuo].fitness);
+        printf("----------------------\n");
+
 }
