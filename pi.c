@@ -8,9 +8,10 @@
 #define TamanhoPopulacao 20     //Quantidade de cromossomos em cada geracao
 #define ORIGEM 1                //Node de origem dos cromossomos
 #define DESTINO 2               //Node de destino dos cromossomos
-#define TaxaMutacao 50
+#define TaxaMutacao 100
 #define TaxaElitismo 10   //Referente a permanencia de percentual de individuos para a proxima geracao
-#define QtGeracoes 10
+#define TaxaMutagenicos 10   //Referente a mutacao de individuos antes de reproduzirem
+#define QtGeracoes 15
 
 
 /*
@@ -91,6 +92,7 @@ int main(void){
     int *OrigemDestinoPeso;   //Vetor Auxiliar Para Transportar o Node de origem, Node de destino e Peso de uma Conexao
     int temArquivo = 0;    //Representa o final do arquivo
     int percentualElitismo = TamanhoPopulacao / TaxaElitismo;
+    int percentualMutacaoAdultos = TamanhoPopulacao / TaxaMutagenicos;
     int geracao = 0;     //Identifica geracao atual
     int somaFitness = 0;    //Armazena o valor total do fitness da populacao para selecao dos melhores
     int *melhores;          //Armazena os melhores 10% da populacao
@@ -136,10 +138,17 @@ int main(void){
             newPopulacao[individuo] = copyCromossomo(populacao[melhores[individuo]]);
             individuo++;
         }
+        int ultimos = TamanhoPopulacao-1;
+        int contador = 0;
+        for (contador; contador < percentualMutacaoAdultos; contador ++){
+            mutar(newPopulacao[ultimos].caminho, graph);
+            corrigeLoop(newPopulacao[ultimos].caminho);
+            newPopulacao[ultimos].peso = pesoCromossomo(newPopulacao[ultimos].caminho, graph);
+            ultimos--;
+        }
         somaFitness = 0;
         generateFitness(newPopulacao, &somaFitness);
         populacao = newPopulacao;
-        printf("%d", geracao);
     }while(geracao < QtGeracoes);
 //    showIndividuo(populacao, melhores[0]);
     showPopulacao(populacao);
@@ -562,9 +571,8 @@ void crossingOver(cromossomo *individuo1, cromossomo *individuo2, int pontoCross
 
 void corrigeLoop(gene *caminho){
     binaryTree *tree = initializeTree(caminho->id);;
-    gene *loop;
+    gene *loop = caminho->next, *proximo = caminho->next;
     while(1){
-        loop = caminho->next;
         if(loop == NULL){
             return;
         }else{
@@ -572,11 +580,17 @@ void corrigeLoop(gene *caminho){
                 break;
             }
         }
+        loop = loop->next;
     }
-    while(caminho->id != loop->id){
+    while((caminho->id != loop->id) && (proximo->id != loop->id)){
         caminho = caminho->next;
+        proximo = proximo->next;
     }
-    caminho->next = loop->next;
+    if(caminho->id == loop->id){
+        caminho->next = loop->next;
+    }else{
+        proximo->next = loop->next;
+    }
 }
 
 int tamanhoCaminho(gene *caminho){
@@ -598,25 +612,38 @@ void mutar(gene *caminho, node *graph){
                 ponteiro = ponteiro->next;
                 pontoAleatorio--;
             }
-    }while(ponteiro->id == DESTINO);
-    caminho->next = initializeCaminhoCromossomo(caminho->next->id, DESTINO, graph);
+    }while(ponteiro->id == DESTINO && ponteiro->id != ORIGEM);
+    if(ponteiro->next->id == DESTINO){
+        return;
+    } else{
+        do{
+            ponteiro->next = initializeCaminhoCromossomo(ponteiro->id, DESTINO, graph);
+        }while(ponteiro->next == NULL);
+    }
 }
 
-cromossomo cruzamento(cromossomo *populacao, int *arrayProbabilidade, node *graph){
-    cromossomo *offspring1 = (cromossomo*)malloc(sizeof(cromossomo));
-    cromossomo *offspring2 = (cromossomo*)malloc(sizeof(cromossomo));
+cromossomo cruzamento(cromossomo *populacao, int *arrayProbabilidade, node *graph) {
+    cromossomo *offspring1 = (cromossomo *) malloc(sizeof(cromossomo));
+    cromossomo *offspring2 = (cromossomo *) malloc(sizeof(cromossomo));
     int *parents = NULL, pontoCrossingOver;
-    do{
+    do {
         parents = chooseParents(arrayProbabilidade);
         pontoCrossingOver = avaliaCruzamento(populacao[parents[0]], populacao[parents[1]]);
-    }while(pontoCrossingOver == -1);
+    } while (pontoCrossingOver == -1);
     *offspring1 = copyCromossomo(populacao[parents[0]]);
     *offspring2 = copyCromossomo(populacao[parents[1]]);
     crossingOver(offspring1, offspring2, pontoCrossingOver);
     corrigeLoop(offspring1->caminho);
     corrigeLoop(offspring2->caminho);
-//    if (rand() % 101 <= TaxaMutacao) mutar(offspring1->caminho, graph);
-//    if (rand() % 101 <= TaxaMutacao) mutar(offspring2->caminho, graph);
+
+    if (rand() % 101 <= TaxaMutacao){
+        mutar(offspring1->caminho, graph);
+        corrigeLoop(offspring1->caminho);
+}
+    if (rand() % 101 <= TaxaMutacao){
+        mutar(offspring2->caminho, graph);
+        corrigeLoop(offspring2->caminho);
+    }
     offspring1->peso = pesoCromossomo(offspring1->caminho, graph);
     offspring2->peso = pesoCromossomo(offspring2->caminho, graph);
     return (offspring1->peso > offspring2->peso)? *offspring2: *offspring1;
