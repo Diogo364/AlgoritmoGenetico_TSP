@@ -3,21 +3,21 @@
 #include <time.h>
 #include <string.h>
 
-#define QtNode 10
+#define QtNode 100000
 #define INF 1000                //Valor absurdo para conexao inexistente
-#define TamanhoPopulacao 20     //Quantidade de cromossomos em cada geracao
-#define ORIGEM 1                //Node de origem dos cromossomos
+#define TamanhoPopulacao 100    //Quantidade de cromossomos em cada geracao
+#define ORIGEM 5                //Node de origem dos cromossomos
 #define DESTINO 2               //Node de destino dos cromossomos
-#define TaxaMutacao 100
+#define TaxaMutacao 0
 #define TaxaElitismo 10   //Referente a permanencia de percentual de individuos para a proxima geracao
 #define TaxaMutagenicos 10   //Referente a mutacao de individuos antes de reproduzirem
-#define QtGeracoes 15
+#define QtGeracoes 10
 
 
 /*
     **ANTES DE COMPILAR: Ajeitar caminho absoluto do arquivo -> graph.txt
 */
-#define path "/Users/diogotelheirodonascimento/Desktop/PI/graph.txt" //Caminho ABSOLUTO do arquivo txt que contem a estrutura do grafo
+#define path "/Users/diogotelheirodonascimento/Desktop/PI/graph1.txt" //Caminho ABSOLUTO do arquivo txt que contem a estrutura do grafo
 
 //Estrutura de cada node
 typedef struct node{
@@ -61,30 +61,41 @@ typedef struct binaryTree{
 
 
 //Prototipagem das Funcoes
-node * inicializarArrayNode(void);
-int semConexao(node Node);
-void createEdge(node **Node,int origin ,int destination, int weight);
-int readFile(FILE *arquivoConexaoNode, int **origemDestinoPeso);
-cromossomo * createArrayCromossomo(int origem, int destino, node *graph, int *geracao);
-gene * createGeneNode(int Node);
-gene* initializeGene();
-gene * initializeCaminhoCromossomo(int origem, int destino, node *Graph);
-int pesoCromossomo(gene *caminho, node *graph);
+
+//Funcoes ARVORE BINARIA
 binaryTree * initializeTree(int origem);
 int isInTree(int value, binaryTree *tree);
-void showPopulacao(cromossomo *Cromossomo);
-void showIndividuo(cromossomo *populacao, int individuo);
+
+//Funcoes Algoritmo Genetico
+cromossomo * createArrayCromossomo(int origem, int destino, node *graph, int *geracao);
+gene * initializeCaminhoCromossomo(int origem, int destino, node *Graph);
+gene* initializeGene();
+gene * createGeneNode(int Node);
 int pesarPopulacao(cromossomo *populacao);
 void generateFitness(cromossomo *populacao, int *somatorioFitness);
 int * generateArrayProbabilidade(cromossomo *populacao, int somatorioFitness);
 int * pickTop10(cromossomo *populacao, int *percentualElitismo);
+int * chooseParents(int *arrayProbabilidade);
 int avaliaCruzamento(cromossomo parent1, cromossomo parent2);
+cromossomo cruzamento(cromossomo *populacao, int *arrayProbabilidade, node *graph);
 cromossomo copyCromossomo(cromossomo individuo);
 void crossingOver(cromossomo *individuo1, cromossomo *individuo2, int pontoCrossingOver);
-void corrigeLoop(gene *caminho);
 int tamanhoCaminho(gene *caminho);
 void mutar(gene *caminho, node *graph);
-cromossomo cruzamento(cromossomo *populacao, int *arrayProbabilidade, node *graph);
+void corrigeLoop(gene *caminho);
+int pesoCromossomo(gene *caminho, node *graph);
+void showPopulacao(cromossomo *Cromossomo);
+void showIndividuo(cromossomo *populacao, int individuo);
+
+
+
+//Funcoes NODE
+node * inicializarArrayNode(void);
+int semConexao(node Node);
+void createEdge(node **Node,int origin ,int destination, int weight);
+int readFile(FILE *arquivoConexaoNode, int **origemDestinoPeso);
+
+
 
 int main(void){
     FILE *connections; //Estrutura das conexoes do grafo sera carregada por essa variavel
@@ -121,8 +132,13 @@ int main(void){
     //**Grafo inicializado na variavel graph
 
     //CODIGO GENETICO
+//    clock_t begin = clock();
+
     populacao = createArrayCromossomo(ORIGEM, DESTINO, graph, &geracao);
     generateFitness(populacao, &somaFitness);
+    printf("GERACAO: %d", geracao);
+    printf("--------------------------------\n\n");
+    showPopulacao(populacao);
 
     do{
         individuo = 0;
@@ -149,10 +165,13 @@ int main(void){
         somaFitness = 0;
         generateFitness(newPopulacao, &somaFitness);
         populacao = newPopulacao;
+        printf("GERACAO: %d", geracao);
+        printf("--------------------------------\n\n");
+        showIndividuo(newPopulacao, 0);
     }while(geracao < QtGeracoes);
-//    showIndividuo(populacao, melhores[0]);
-    showPopulacao(populacao);
-
+//    clock_t end = clock();
+//    double time_spent = (double)(end - begin) / CLOCKS_PER_SEC;
+//    printf("TEMPO DE EXECUCAO: %d", time_spent);
     return 0;
 }
 
@@ -623,8 +642,8 @@ void mutar(gene *caminho, node *graph){
 }
 
 cromossomo cruzamento(cromossomo *populacao, int *arrayProbabilidade, node *graph) {
-    cromossomo *offspring1 = (cromossomo *) malloc(sizeof(cromossomo));
-    cromossomo *offspring2 = (cromossomo *) malloc(sizeof(cromossomo));
+    cromossomo *offspring1 = (cromossomo*) malloc(sizeof(cromossomo));
+    cromossomo *offspring2 = (cromossomo*) malloc(sizeof(cromossomo));
     int *parents = NULL, pontoCrossingOver;
     do {
         parents = chooseParents(arrayProbabilidade);
