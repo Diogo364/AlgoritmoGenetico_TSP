@@ -17,7 +17,7 @@
 /*
     **ANTES DE COMPILAR: Ajeitar caminho absoluto do arquivo -> graph.txt
 */
-#define path "/Users/diogotelheirodonascimento/Desktop/PI/graph1.txt" //Caminho ABSOLUTO do arquivo txt que contem a estrutura do grafo
+#define path "/Users/diogotelheirodonascimento/Desktop/PI/graph3.txt" //Caminho ABSOLUTO do arquivo txt que contem a estrutura do grafo
 
 //Estrutura de cada node
 typedef struct node{
@@ -86,6 +86,7 @@ void corrigeLoop(gene *caminho);
 int pesoCromossomo(gene *caminho, node *graph);
 void showPopulacao(cromossomo *Cromossomo);
 void showIndividuo(cromossomo *populacao, int individuo);
+void showBest(cromossomo *populacao);
 
 
 
@@ -137,10 +138,10 @@ int main(void){
     tempoExecucao = clock();
     populacao = createArrayCromossomo(ORIGEM, DESTINO, graph, &geracao);
     generateFitness(populacao, &somaFitness);
-    showPopulacao(populacao);
-    printf("\n\n");
-    printf("------------------------------------");
-    printf("\n\n");
+//    showPopulacao(populacao);
+//    printf("\n\n");
+//    printf("------------------------------------");
+//    printf("\n\n");
     do{
         individuo = 0;
         arrayProbabilidade = generateArrayProbabilidade(populacao, somaFitness);
@@ -169,9 +170,10 @@ int main(void){
 //        printf("--------------------------------\n\n");
 //        showIndividuo(newPopulacao, 0);
     }while(geracao < QtGeracoes);
-    showPopulacao(newPopulacao);
+//    showPopulacao(newPopulacao);
     tempoExecucao = clock() - tempoExecucao;
     printf("\nTEMPO DE EXECUCAO: %f", ((double)tempoExecucao)/(CLOCKS_PER_SEC));
+    showBest(newPopulacao);
     return 0;
 }
 
@@ -700,4 +702,14 @@ void showIndividuo(cromossomo *populacao, int individuo){
         printf("PESO %d\n", populacao[individuo].peso);
         printf("----------------------\n");
 
+}
+
+void showBest(cromossomo *populacao){
+    int  current = 0, best = 0;
+    for(current = 1; current < TamanhoPopulacao; current++){
+        if(populacao[current].peso < populacao[best].peso){
+            best = current;
+        }
+    }
+        showIndividuo(populacao, best);
 }
