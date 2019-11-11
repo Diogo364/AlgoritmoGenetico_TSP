@@ -4,20 +4,20 @@
 #include <string.h>
 
 #define QtNode 100000
-#define INF 1000                //Valor absurdo para conexao inexistente
-#define TamanhoPopulacao 100    //Quantidade de cromossomos em cada geracao
+#define INF 10000                //Valor absurdo para conexao inexistente
+#define TamanhoPopulacao 35    //Quantidade de cromossomos em cada geracao
 #define ORIGEM 5                //Node de origem dos cromossomos
 #define DESTINO 2               //Node de destino dos cromossomos
-#define TaxaMutacao 50
+#define TaxaMutacao 3
 #define TaxaElitismo 10   //Referente a permanencia de percentual de individuos para a proxima geracao
-#define TaxaMutagenicos 20   //Referente a mutacao de individuos antes de reproduzirem
-#define QtGeracoes 10
+#define TaxaMutagenicos 5   //Referente a mutacao de individuos antes de reproduzirem
+#define QtGeracoes 1000
 
 
 /*
     **ANTES DE COMPILAR: Ajeitar caminho absoluto do arquivo -> graph.txt
 */
-#define path "/Users/diogotelheirodonascimento/Desktop/PI/graph3.txt" //Caminho ABSOLUTO do arquivo txt que contem a estrutura do grafo
+#define path "/Users/diogotelheirodonascimento/Desktop/PI/graph2.txt" //Caminho ABSOLUTO do arquivo txt que contem a estrutura do grafo
 
 //Estrutura de cada node
 typedef struct node{
@@ -138,6 +138,7 @@ int main(void){
     tempoExecucao = clock();
     populacao = createArrayCromossomo(ORIGEM, DESTINO, graph, &geracao);
     generateFitness(populacao, &somaFitness);
+    showBest(populacao);
 //    showPopulacao(populacao);
 //    printf("\n\n");
 //    printf("------------------------------------");
