@@ -3,21 +3,27 @@
 #include <time.h>
 #include <string.h>
 
-#define QtNode 100000
-#define INF 10000                //Valor absurdo para conexao inexistente
-#define TamanhoPopulacao 35    //Quantidade de cromossomos em cada geracao
-#define ORIGEM 5                //Node de origem dos cromossomos
-#define DESTINO 2               //Node de destino dos cromossomos
-#define TaxaMutacao 3
-#define TaxaElitismo 10   //Referente a permanencia de percentual de individuos para a proxima geracao
-#define TaxaMutagenicos 5   //Referente a mutacao de individuos antes de reproduzirem
-#define QtGeracoes 1000
+#define QtNode 1000
+#define INF 10000                 //Valor absurdo para conexao inexistente
+#define RESULTADO "resultadosMetro.txt"
+
+#define path "/Users/diogotelheirodonascimento/Desktop/PI/graph3.txt"
+#define TamanhoPopulacao 11
+#define ORIGEM 999
+#define DESTINO 1
+#define TaxaMutacao 30
+#define TaxaElitismo 10
+#define TaxaMutagenicos 10
+#define QtGeracoes 10
 
 
+//NAO USAR
+//#define local "graph3.txt"
+//#define PATH_PESOS "pesos95.txt"
 /*
     **ANTES DE COMPILAR: Ajeitar caminho absoluto do arquivo -> graph.txt
 */
-#define path "/Users/diogotelheirodonascimento/Desktop/PI/graph2.txt" //Caminho ABSOLUTO do arquivo txt que contem a estrutura do grafo
+
 
 //Estrutura de cada node
 typedef struct node{
@@ -87,6 +93,9 @@ int pesoCromossomo(gene *caminho, node *graph);
 void showPopulacao(cromossomo *Cromossomo);
 void showIndividuo(cromossomo *populacao, int individuo);
 void showBest(cromossomo *populacao);
+//void writeData(FILE *point, cromossomo *populacao, int geracao);
+int * topTop10(cromossomo *populacao);
+void write10Individuos(cromossomo *populacao);
 
 
 
@@ -100,6 +109,9 @@ int readFile(FILE *arquivoConexaoNode, int **origemDestinoPeso);
 
 int main(void){
     FILE *connections; //Estrutura das conexoes do grafo sera carregada por essa variavel
+    FILE *tests = NULL;
+    FILE *pesos = NULL;
+    FILE *bests = NULL;
     node *graph;       //Array de nodes (grafo)
     int *OrigemDestinoPeso;   //Vetor Auxiliar Para Transportar o Node de origem, Node de destino e Peso de uma Conexao
     int temArquivo = 0;    //Representa o final do arquivo
@@ -134,15 +146,19 @@ int main(void){
     }while(temArquivo);
     //**Grafo inicializado na variavel graph
 
+//    fprintf(tests, ",grafo,arquivoPesosGerado,qtdVertices,tamPopulacao,qtdGeracoes,taxaMutacao,taxaElitismo,taxaMutacaoAdultos,origem,destino\n" );
+//    tests = fopen("estatistica.txt", "a");
+//    fprintf(tests, "%s,%s,%d,%d,%d,%d,%d,%d,%d,%d\n",local,PATH_PESOS,QtNode,TamanhoPopulacao, QtGeracoes, TaxaMutacao, TaxaElitismo, TaxaMutagenicos, ORIGEM, DESTINO);
+//    fclose(tests);
     //CODIGO GENETICO
+
     tempoExecucao = clock();
     populacao = createArrayCromossomo(ORIGEM, DESTINO, graph, &geracao);
     generateFitness(populacao, &somaFitness);
-    showBest(populacao);
+//    writeData(pesos, populacao, geracao);
 //    showPopulacao(populacao);
-//    printf("\n\n");
-//    printf("------------------------------------");
-//    printf("\n\n");
+//    showBest(populacao);
+//    printf("\n");
     do{
         individuo = 0;
         arrayProbabilidade = generateArrayProbabilidade(populacao, somaFitness);
@@ -167,14 +183,16 @@ int main(void){
         somaFitness = 0;
         generateFitness(newPopulacao, &somaFitness);
         populacao = newPopulacao;
-//        printf("GERACAO: %d", geracao);
-//        printf("--------------------------------\n\n");
-//        showIndividuo(newPopulacao, 0);
+//        writeData(pesos, populacao, geracao);
+//        showPopulacao(populacao);
     }while(geracao < QtGeracoes);
-//    showPopulacao(newPopulacao);
+
     tempoExecucao = clock() - tempoExecucao;
-    printf("\nTEMPO DE EXECUCAO: %f", ((double)tempoExecucao)/(CLOCKS_PER_SEC));
-    showBest(newPopulacao);
+    showPopulacao(populacao);
+    write10Individuos(populacao);
+    bests = fopen(RESULTADO, "a");
+    fprintf(bests, "\n\nTEMPO DE EXECUCAO: %f\n", ((double)tempoExecucao)/(CLOCKS_PER_SEC));
+//    fprintf(bests, "MELHOR PESO ENCONTRADO: %d \n", );
     return 0;
 }
 
@@ -678,15 +696,13 @@ void showPopulacao(cromossomo *populacao){
     int atual;      //Variavel para indice do cromossomo
     gene *pointer;  //Aponta para os nodes do caminho do cromossomo
     for (atual = 0; atual < TamanhoPopulacao; ++atual) { //Para todos os cromossomos da populacao
-        pointer = populacao[atual].caminho;    //Aponta para o primeiro do caminho
-        printf("populacao %d\n", atual); //Impressao do peso
-        while(pointer != NULL){     //Enquanto nao acabar o caminho
-            printf("Node: %d\n", pointer->id);     //Imprime o node correspondente
-            pointer = pointer->next;    //Aponta para o proximo node do caminho
-        }
-        printf("----------------------\n");
-        printf("PESO: %d\nFITNESS %d\n", populacao[atual].peso, populacao[atual].fitness);
-        printf("----------------------\n");
+//        pointer = populacao[atual].caminho;    //Aponta para o primeiro do caminho
+//        printf("populacao %d\n", atual); //Impressao do peso
+//        while(pointer != NULL){     //Enquanto nao acabar o caminho
+//            printf("Node: %d\n", pointer->id);     //Imprime o node correspondente
+//            pointer = pointer->next;    //Aponta para o proximo node do caminho
+//        }
+        printf("%d,", populacao[atual].peso);
     }
 }
 //Apresentacao de cromossomos
@@ -714,3 +730,76 @@ void showBest(cromossomo *populacao){
     }
         showIndividuo(populacao, best);
 }
+
+
+void write10Individuos(cromossomo *populacao){
+    gene *caminho;
+    int melhorpeso = 1000000000;
+    int *tops;
+    FILE *resultados = fopen(RESULTADO, "a");
+    tops = topTop10(populacao);
+    for (int i = 0; i < 10; ++i) {
+        caminho = populacao[tops[i]].caminho;
+        fprintf(resultados, "\nIndividuo %d\n", tops[i]); //Impressao do peso
+        while(caminho != NULL){     //Enquanto nao acabar o caminho
+            fprintf(resultados, "Node: %d\n", caminho->id);     //Imprime o node correspondente
+            caminho = caminho->next;    //Aponta para o proximo node do caminho
+        }
+        fprintf(resultados,"PESO %d\n", populacao[tops[i]].peso);
+        printf("----------------------\n");
+        if (populacao[tops[i]].peso < melhorpeso){
+            melhorpeso = populacao[tops[i]].peso;
+        }
+    }
+    fprintf(resultados, "\n\nMELHOR PESO ENCONTRADO: %d", melhorpeso);
+    fclose(resultados);
+}
+
+
+
+int * topTop10(cromossomo *populacao){
+    int contador = 0, individuo = 0;
+    int fitnessCandidato = 0;
+    int fitnessConsolidado = 0;
+    int candidato = 0, aux = 0;
+
+    //Aloca vetor de tamanho correspondente a 10% da populacao
+    int *top10 = (int*)malloc(sizeof(int) * 10);
+    while(individuo < TamanhoPopulacao){    //Enquanto houverem individuos na populacao
+        //Adiciona os primeiros 10% individuos da populacao no array
+        if(individuo < 10){
+            top10[individuo] = individuo;
+        }
+            //Teste para restante da populacao
+        else{
+            candidato = individuo;
+            //Itera o array dos 10% comparando candidatos com os consolidados
+            //Se o candidato for mais adaptado que o consolidado, este e acrescentado aos consolidados e o ex-consolidado se torna o novo candidato
+            while(contador < 10){
+                fitnessCandidato = populacao[candidato].fitness;
+                fitnessConsolidado = populacao[top10[contador]].fitness;
+                if(fitnessCandidato > fitnessConsolidado){
+                    aux = top10[contador];
+                    top10[contador] = individuo;
+                    candidato = aux;
+                }
+                contador++;
+            }
+        }
+        individuo++;
+        contador = 0;
+    }
+    return top10;
+}
+
+
+
+//void writeData(FILE *point, cromossomo *populacao, int geracao){
+//    point = fopen(PATH_PESOS, "a");
+//    fprintf(point, "%d,", geracao);
+//    for (int i = 0; i < TamanhoPopulacao; ++i) {
+//        fprintf(point, "%d,", populacao[i].peso);
+//    }
+//    fprintf(point, "\n");
+//    fclose(point);
+//}
