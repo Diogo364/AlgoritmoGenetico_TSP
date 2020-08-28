@@ -1,5 +1,6 @@
 # Algoritmo de Dijkstras e Algoritmo Genético
-### O trabalho foi realizado para a disciplina "Projeto Integrador" do 3º semestre do curso de Ciência da Computação do IESB - Brasília e contou com o auxílio de Pedro Haluch, Samuel Rocha e Gabriel Prado para a produção de Grafos aleatórios, Algoritmo de Dijkstra e a análise dos dados para a produção do trabalho escrito contido nesse repositório.
+## Descrição
+O trabalho foi realizado para a disciplina "Projeto Integrador" do 3º semestre do curso de Ciência da Computação do IESB - Brasília e contou com o auxílio de Pedro Haluch, Samuel Rocha e Gabriel Prado para a produção de Grafos aleatórios, Algoritmo de Dijkstra e a análise dos dados para a produção do trabalho escrito contido nesse repositório.
 
 # Algoritmo Genetico em Linguagem C para resolução do problema de melhor caminho.
 ## Estrutura base
